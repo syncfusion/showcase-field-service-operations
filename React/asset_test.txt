@@ -1,0 +1,4 @@
+<!doctype html>
+<html lang="en-US"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="color-scheme" content="light dark"/><meta name="description" content="Field Service Operations — a synthetic Syncfusion showcase with private session-only edits."/><title>Field Service Operations | Syncfusion Showcase</title><link rel="icon" href="/field-service-ops/react/favicon.ico"/><link id="syncfusion-theme" rel="stylesheet"/>  <script type="module" crossorigin src="/field-service-ops/react/assets/index-BIZP0rlg.js"></script>
+  <link rel="stylesheet" crossorigin href="/field-service-ops/react/assets/index-C5QwIuMw.css">
+</head><body><div id="root"></div></body></html>

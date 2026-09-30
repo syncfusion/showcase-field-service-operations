@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vite / TypeScript caches
+*.tsbuildinfo
+vite-cache/
+.vite/
+
+# Environment files (keep the example, ignore real keys)
+.env
+.env.*
+!.env.example
+
+# Syncfusion license key — never commit
+# (covered by .env.* above; keeping an explicit reminder)
+
+# Playwright output
+playwright-report/
+test-results/
+playwright/.cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+
