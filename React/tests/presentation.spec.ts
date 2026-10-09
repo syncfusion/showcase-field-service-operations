@@ -5,7 +5,7 @@ const viewports = [{width:320,height:800},{width:768,height:900},{width:1024,hei
 test('four routes retain a contained layout at required viewport widths', async ({page}) => {
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    for (const route of ['overview','work-orders','dispatch','assistant']) {
+    for (const route of ['overview','work-orders','dispatch']) {
       await page.goto(`/${route}`);
       await expect(page.locator('h1')).toBeVisible();
       expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();

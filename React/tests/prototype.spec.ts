@@ -1,4 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+// Shift only the browser's Date so rebased sample dates are deterministic; timers keep running normally.
+const setToday = (page: Page, instant: string) => page.addInitScript(start => {
+  const RealDate = Date, offset = start - RealDate.now();
+  class ShiftedDate extends RealDate {
+    constructor(...args: unknown[]) { if (args.length) super(...args as [number]); else super(RealDate.now() + offset); }
+    static now() { return RealDate.now() + offset; }
+  }
+  globalThis.Date = ShiftedDate as DateConstructor;
+}, Date.parse(instant));
+test.beforeEach(async ({page}, testInfo) => { await setToday(page, testInfo.title.startsWith('sample dates follow') ? '2026-10-08T16:53:00Z' : '2026-09-15T13:00:00Z'); });
 
 test('four-route shell and coherent assignment prototype', async ({page}) => {
   await page.goto('/overview');
@@ -8,8 +19,8 @@ test('four-route shell and coherent assignment prototype', async ({page}) => {
   await page.getByRole('button', {name:'Assign WO-1001',exact:true}).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.locator('#assignment-technician')).toHaveValue('Eli Carter');
-  await expect(page.getByLabel('Start time (Eastern)')).toHaveValue('09/15/2026 10:30 AM');
-  await expect(page.getByLabel('End time (Eastern)')).toHaveValue('09/15/2026 11:30 AM');
+  await expect(page.getByLabel('Start time')).toHaveValue('09/15/2026 10:30 AM');
+  await expect(page.getByLabel('End time')).toHaveValue('09/15/2026 11:30 AM');
   await page.getByRole('button', {name:'Save assignment',exact:true}).click();
   await expect(page.getByRole('alert')).toContainText('overlap');
   await page.getByRole('button', {name:'Use next available slot · 11:00 AM',exact:true}).click();
@@ -18,10 +29,14 @@ test('four-route shell and coherent assignment prototype', async ({page}) => {
   await expect(page.getByTestId('metric-unassigned')).toHaveText('9');
   await page.getByRole('link', {name:'Dispatch Board',exact:true}).click();
   await expect(page.getByTestId('card-WO-1001')).toContainText('Scheduled');
-  await page.getByRole('link', {name:'AI Assistant',exact:true}).click();
+  await expect(page.getByRole('link', {name:'AI Assistant',exact:true})).toHaveCount(0);
+  await page.getByRole('button', {name:'Open AI assistant'}).click();
+  await expect(page.locator('#assistant-view')).toBeVisible();
   await expect(page.getByText('Sample responses', {exact:true})).toBeVisible();
   await expect(page.getByRole('heading', {name:'AI assistant', level:2})).toBeVisible();
   await expect(page.getByText('Deterministic sample provider through IoC', {exact:false})).toBeVisible();
+  await page.getByRole('button', {name:'Close AI assistant'}).click();
+  await expect(page.locator('#assistant-view')).toBeHidden();
   await page.reload();
   await page.goto('/overview');
   await expect(page.getByTestId('metric-unassigned')).toHaveText('10');
@@ -72,4 +87,40 @@ test('dispatch Kanban enables validated card dragging while swimlane moves stay 
   });
   expect(settings).toEqual({allowDragAndDrop:true, allowSwimlaneDragAndDrop:false});
   await expect(page.getByText('Drag a card to make a validated lifecycle change.', {exact:false})).toBeVisible();
+});
+
+test('sample dates follow the viewer today, a scheduled job can start, and messages clear on navigation', async ({page}) => {
+  await page.goto('/dispatch');
+  await expect(page.locator('.demo-clock')).toContainText('Today · Oct 8, 2026');
+  await expect(page.locator('#dispatch-board')).not.toContainText('Sep 1');
+  await page.goto('/work-orders');
+  await page.getByLabel('Search work orders').fill('WO-1011');
+  await page.getByRole('button', {name:'Manage WO-1011'}).click();
+  await page.getByRole('button', {name:'Start work'}).click();
+  await expect(page.locator('.notice.success')).toContainText('WO-1011 started');
+  await page.getByRole('link', {name:'Overview', exact:true}).click();
+  await expect(page.locator('.notice')).toHaveCount(0);
+});
+
+test('the assistant button is on every page, answers from the session and keeps the conversation across pages', async ({page}) => {
+  for (const route of ['overview','work-orders','dispatch']) {
+    await page.goto(`/${route}`);
+    await expect(page.getByRole('button', {name:'Open AI assistant'})).toBeVisible();
+  }
+  await page.getByRole('button', {name:'Open AI assistant'}).click();
+  await page.getByText('Summarize current workload', {exact:true}).click();
+  await expect(page.locator('#assistant-view')).toContainText('24 open work orders');
+  await page.getByRole('link', {name:'Overview', exact:true}).click();
+  await expect(page.locator('#assistant-view')).toContainText('24 open work orders');
+  // Wide screens pin the open panel beside the page; Escape closes it from the prompt box.
+  await page.setViewportSize({width:1440,height:900});
+  await expect.poll(async () => (await page.locator('.app-shell').boundingBox())!.width).toBe(1040);
+  await expect(page.getByText('AI Assist', {exact:true})).toBeHidden();
+  await page.locator('#assistant-panel .e-footer textarea, #assistant-panel .e-footer [contenteditable="true"]').first().click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#assistant-view')).toBeHidden();
+  await expect.poll(async () => (await page.locator('.app-shell').boundingBox())!.width).toBe(1440);
+  await page.goto('/assistant');
+  await expect(page.getByRole('heading', {name:'Operations overview'})).toBeVisible();
+  await expect(page.locator('#assistant-view')).toBeVisible();
 });

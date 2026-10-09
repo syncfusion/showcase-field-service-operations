@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { parseDataset, type Dataset } from '../../../../shared/contracts/domain.ts';
+import { parseDataset, rebaseDataset, type Dataset } from '../../../../shared/contracts/domain.ts';
 import { commitSessionCommand, loadSession, resetSession, saveSession, STORAGE_KEY, type StorageLike } from './session.ts';
 
 function baseline(): Dataset {
@@ -98,12 +98,11 @@ test('schema, dataset identity and dataset revision mismatches cannot replay sta
   }
 });
 
-test('customer snapshots cannot replace technicians, sites or scenario metadata', () => {
+test('customer snapshots cannot replace technicians or sites', () => {
   const original = baseline();
   const alterations = [
     (changed: Dataset) => { changed.technicians[0].name = 'Altered reference'; },
     (changed: Dataset) => { changed.sites[0].name = 'Altered reference'; },
-    (changed: Dataset) => { changed.demoNow = '2026-09-16T13:00:00Z'; },
   ];
   for (const alter of alterations) {
     const changed = structuredClone(original);
@@ -113,6 +112,22 @@ test('customer snapshots cannot replace technicians, sites or scenario metadata'
     assert.equal(result.blocked, true);
     assert.deepEqual(result.dataset, original);
   }
+});
+
+test('a customer snapshot saved on an earlier day moves forward with the rebased baseline', () => {
+  const original = baseline();
+  const saved = structuredClone(original);
+  const job = saved.workOrders.find(workOrder => workOrder.status === 'Unscheduled')!;
+  job.title = 'Saved yesterday';
+  job.revision += 1;
+  const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(saved) });
+  const today = rebaseDataset(original, new Date('2026-10-08T09:47:00Z'));
+  const restored = loadSession(today, 'customer', storage);
+  assert.equal(restored.blocked, false);
+  assert.equal(restored.dataset.demoNow, today.demoNow);
+  const moved = restored.dataset.workOrders.find(workOrder => workOrder.id === job.id)!;
+  assert.equal(moved.title, 'Saved yesterday');
+  assert.equal(moved.dueAt, today.workOrders.find(workOrder => workOrder.id === job.id)!.dueAt);
 });
 
 test('snapshot work-order references are validated, not only metadata', () => {

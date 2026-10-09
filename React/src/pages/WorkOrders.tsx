@@ -5,11 +5,12 @@ import { Search } from 'lucide-react';
 import { ButtonComponent } from '@syncfusion/ej2-react-buttons';
 import { type Dataset, type WorkOrder, type Status, statusLabels } from '../../../../shared/contracts/domain.ts';
 import { WorkOrderGrid } from '../components/WorkOrderGrid.tsx';
+import { formatDay } from '../state/time.ts';
 export function WorkOrders({dataset,onAssign,onManage,onCreate,filter,setFilter,blocked}: {dataset:Dataset;onAssign:(job:WorkOrder)=>void;onManage:(job:WorkOrder)=>void;onCreate:()=>void;filter:string;setFilter:(value:string)=>void;blocked:boolean}) {
   const [search,setSearch] = useState('');
   const rows = dataset.workOrders.filter(job => {
     const active = ['Unscheduled','Scheduled','InProgress'].includes(job.status);
-    const matches = filter==='all' || (filter==='open'&&active) || (filter==='unassigned'&&job.status==='Unscheduled') || (filter==='overdue'&&active&&job.dueAt<dataset.demoNow) || (filter==='completedToday'&&job.status==='Completed'&&new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York'}).format(new Date(job.completedAt!))===new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York'}).format(new Date(dataset.demoNow))) || job.status===filter;
+    const matches = filter==='all' || (filter==='open'&&active) || (filter==='unassigned'&&job.status==='Unscheduled') || (filter==='overdue'&&active&&job.dueAt<dataset.demoNow) || (filter==='completedToday'&&job.status==='Completed'&&formatDay(job.completedAt!)===formatDay(dataset.demoNow)) || job.status===filter;
     const site = dataset.sites.find(site=>site.id===job.siteId)?.name ?? '';
     const technician = dataset.technicians.find(tech=>tech.id===job.technicianId)?.name ?? 'unassigned';
     return matches && [job.id,job.title,job.territoryId,site,technician].join(' ').toLowerCase().includes(search.toLowerCase().trim());

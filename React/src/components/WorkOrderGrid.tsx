@@ -11,7 +11,7 @@ export function WorkOrderGrid({dataset,rows,onAssign,onManage,blocked=false,comp
       <ColumnDirective field="siteName" headerText="Site" width="160" />
       <ColumnDirective field="status" headerText="Status" width="140" template={(job:WorkOrder)=><StatusBadge job={job}/>} />
       {!compact && <ColumnDirective field="technicianName" headerText="Technician" width="160" />}
-      {!compact && <ColumnDirective field="dueAt" headerText="Due · Eastern" width="175" template={(job:WorkOrder)=><span>{formatDate(job.dueAt)}</span>} />}
+      {!compact && <ColumnDirective field="dueAt" headerText="Due" width="175" template={(job:WorkOrder)=><span>{formatDate(job.dueAt)}</span>} />}
       <ColumnDirective headerText="Action" width="136" allowSorting={false} template={(job:WorkOrder)=><div className="grid-actions">{['Unscheduled','Scheduled'].includes(job.status) && <ButtonComponent cssClass="action-button" disabled={blocked} aria-label={`Assign ${job.id}`} onClick={()=>onAssign(job)}>{job.status==='Scheduled'?'Reschedule':'Assign'}</ButtonComponent>}{onManage && <ButtonComponent cssClass="action-button" disabled={blocked} aria-label={`Manage ${job.id}`} onClick={()=>onManage(job)}>Manage</ButtonComponent>}</div>} />
     </ColumnsDirective><Inject services={[Page,Sort]}/>
   </GridComponent></div>;

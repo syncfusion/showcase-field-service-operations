@@ -6,6 +6,7 @@ import { ChartComponent, SeriesCollectionDirective, SeriesDirective, Inject, Col
 import { GridComponent, ColumnsDirective, ColumnDirective, Inject as GridInject, Sort } from '@syncfusion/ej2-react-grids';
 import { summarize, statusLabels, type Dataset, type WorkOrder } from '../../../../shared/contracts/domain.ts';
 import { WorkOrderGrid } from '../components/WorkOrderGrid.tsx';
+import { formatDay } from '../state/time.ts';
 export function Overview({dataset,theme,onFilter,onAssign,blocked}: {dataset:Dataset;theme:'light'|'dark';onFilter:(filter:string)=>void;onAssign:(job:WorkOrder)=>void;blocked:boolean}) {
   const totals = summarize(dataset);
   const chartRef = useRef<ChartComponent | null>(null);
@@ -16,7 +17,7 @@ export function Overview({dataset,theme,onFilter,onAssign,blocked}: {dataset:Dat
   const refreshChartOnLoad = () => {
     requestAnimationFrame(() => { chartRef.current?.refresh(); });
   };
-  const metrics = [{key:'open',label:'Open work orders',note:'Across all active stages',icon:ClipboardList},{key:'unassigned',label:'Awaiting assignment',note:'Ready for the dispatch desk',icon:UserRound},{key:'overdue',label:'Past due',note:'Open jobs before demo time',icon:Clock3},{key:'completedToday',label:'Completed today',note:'September 15 · Eastern',icon:CircleCheck}] as const;
+  const metrics = [{key:'open',label:'Open work orders',note:'Across all active stages',icon:ClipboardList},{key:'unassigned',label:'Awaiting assignment',note:'Ready for the dispatch desk',icon:UserRound},{key:'overdue',label:'Past due',note:'Open jobs past their due time',icon:Clock3},{key:'completedToday',label:'Completed today',note:`${formatDay(dataset.demoNow)} · your local time`,icon:CircleCheck}] as const;
   const chart = Object.entries(statusLabels).map(([status,label])=>({label,count:dataset.workOrders.filter(job=>job.status===status).length}));
   const technicianWorkload = dataset.technicians.map(technician => ({
     id: technician.id,

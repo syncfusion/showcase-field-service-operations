@@ -5,7 +5,7 @@ import { DropDownListComponent } from '@syncfusion/ej2-react-dropdowns';
 import { TextBoxComponent } from '@syncfusion/ej2-react-inputs';
 import { DialogComponent } from '@syncfusion/ej2-react-popups';
 import type { CompleteWorkOrderCommand, Dataset, EditWorkOrderCommand, RevisionCommand, WorkOrder, WorkOrderDraft } from '../../../../shared/contracts/domain.ts';
-import { fromEasternWallTime, toEasternWallTime } from '../state/time.ts';
+import { addHours, fromPickerDate, toPickerDate } from '../state/time.ts';
 
 const skills = ['printer', 'meeting-room', 'workstation'] as const;
 
@@ -20,7 +20,7 @@ export function WorkOrderDialog({ dataset, job, onClose, onAssign, onCreate, onE
   const [siteId, setSiteId] = useState(job?.siteId ?? dataset.sites[0]!.id);
   const [priority, setPriority] = useState<WorkOrderDraft['priority']>(job?.priority ?? 'Normal');
   const [requiredSkills, setRequiredSkills] = useState<string[]>(job?.requiredSkills ?? ['printer']);
-  const [dueAt, setDueAt] = useState<Date | undefined>(toEasternWallTime(job?.dueAt ?? '2026-09-15T20:00:00Z'));
+  const [dueAt, setDueAt] = useState<Date | undefined>(toPickerDate(job?.dueAt ?? addHours(dataset.demoNow,7)));
   const [summary, setSummary] = useState('');
   const [error, setError] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -29,7 +29,7 @@ export function WorkOrderDialog({ dataset, job, onClose, onAssign, onCreate, onE
   const run = (action: () => void) => { try { action(); onClose(); } catch (failure) { setError(failure instanceof Error ? failure.message : 'The work order could not be changed.'); } };
   function save() {
     if (!dueAt) { setError('Enter a valid due time.'); return; }
-    const draft = { id, title, siteId, requiredSkills: requiredSkills as WorkOrderDraft['requiredSkills'], priority: priority as WorkOrderDraft['priority'], dueAt: fromEasternWallTime(dueAt) };
+    const draft = { id, title, siteId, requiredSkills: requiredSkills as WorkOrderDraft['requiredSkills'], priority: priority as WorkOrderDraft['priority'], dueAt: fromPickerDate(dueAt) };
     run(() => isNew ? onCreate(draft) : onEdit({ ...draft, expectedRevision: job!.revision }));
   }
   return <DialogComponent header={isNew ? 'New work order' : `Manage ${job!.id}`} visible isModal showCloseIcon width="620px" target="#root" close={onClose} animationSettings={{ effect: 'None' }}>
@@ -39,7 +39,7 @@ export function WorkOrderDialog({ dataset, job, onClose, onAssign, onCreate, onE
         <div className="field"><label id="priority-label" htmlFor="work-order-priority">Priority</label><DropDownListComponent id="work-order-priority" value={priority} enabled={editable} dataSource={['Low', 'Normal', 'High']} htmlAttributes={{ 'aria-labelledby': 'priority-label' }} change={args => setPriority(String(args.value ?? 'Normal') as WorkOrderDraft['priority'])} /></div>
         <div className="field full"><label htmlFor="work-order-title">Title</label><TextBoxComponent id="work-order-title" value={title} enabled={editable} input={args => setTitle(args.value ?? '')} /></div>
         <div className="field"><label id="site-label" htmlFor="work-order-site">Site</label><DropDownListComponent id="work-order-site" value={siteId} enabled={editable} dataSource={dataset.sites.map(site => ({ id: site.id, name: site.name }))} fields={{ text: 'name', value: 'id' }} htmlAttributes={{ 'aria-labelledby': 'site-label' }} change={args => setSiteId(String(args.value ?? ''))} /></div>
-        <div className="field"><label htmlFor="work-order-due">Due time (Eastern)</label><DateTimePickerComponent id="work-order-due" value={dueAt} enabled={editable} format="MM/dd/yyyy hh:mm a" step={30} change={args => setDueAt(args.value ?? undefined)} /></div>
+        <div className="field"><label htmlFor="work-order-due">Due time</label><DateTimePickerComponent id="work-order-due" value={dueAt} enabled={editable} format="MM/dd/yyyy hh:mm a" step={30} change={args => setDueAt(args.value ?? undefined)} /></div>
         <div className="field full"><span className="field-label">Required skills</span><div className="skill-actions">{skills.map(skill => <ButtonComponent key={skill} type="button" cssClass="action-button" aria-pressed={requiredSkills.includes(skill)} disabled={!editable} onClick={() => setRequiredSkills(current => current.includes(skill) ? current.filter(value => value !== skill) : [...current, skill])}>{skill}</ButtonComponent>)}</div></div>
         {job?.status === 'InProgress' && <div className="field full"><label htmlFor="completion-summary">Completion summary</label><TextBoxComponent id="completion-summary" value={summary} multiline htmlAttributes={{ 'name': 'completion-summary', 'aria-label': 'Completion summary' }} input={args => setSummary(args.value ?? '')} /></div>}
       </div>

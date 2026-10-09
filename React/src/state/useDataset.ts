@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { assignWorkOrder, cancelWorkOrder, completeWorkOrder, createWorkOrder, deleteWorkOrder, editWorkOrder, parseDataset, startWorkOrder, unassignWorkOrder, type AssignmentCommand, type CompleteWorkOrderCommand, type Dataset, type EditWorkOrderCommand, type RevisionCommand, type WorkOrderDraft } from '../../../../shared/contracts/domain.ts';
+import { assignWorkOrder, cancelWorkOrder, completeWorkOrder, createWorkOrder, deleteWorkOrder, editWorkOrder, parseDataset, rebaseDataset, startWorkOrder, unassignWorkOrder, type AssignmentCommand, type CompleteWorkOrderCommand, type Dataset, type EditWorkOrderCommand, type RevisionCommand, type WorkOrderDraft } from '../../../../shared/contracts/domain.ts';
 import fixtureUrl from '../../../../shared/fixtures/work-orders.json?url';
 import { commitSessionCommand, loadSession, resetSession, type StorageLike } from './session.ts';
 
@@ -17,7 +17,7 @@ export function useDataset() {
     setError(''); setDataset(null);
     fetch(fixtureUrl,{signal:controller.signal}).then(async response => {
       if (!response.ok) throw new Error('Fixture unavailable');
-      const fresh = parseDataset(await response.json());
+      const fresh = rebaseDataset(parseDataset(await response.json()), new Date());
       if (controller.signal.aborted) return;
       const loaded = loadSession(fresh,__APP_PROFILE__,storage);
       setBaseline(fresh); setDataset(loaded.dataset); setWarning(loaded.warning ?? ''); setBlocked(loaded.blocked);
@@ -34,7 +34,7 @@ export function useDataset() {
   function create(command: WorkOrderDraft) { commit(snapshot => createWorkOrder(snapshot, command), `${command.id} created.`); }
   function edit(command: EditWorkOrderCommand) { commit(snapshot => editWorkOrder(snapshot, command), `${command.id} updated.`); }
   function unassign(command: RevisionCommand) { commit(snapshot => unassignWorkOrder(snapshot, command), `${command.id} returned to Unscheduled.`); }
-  function start(command: RevisionCommand) { commit(snapshot => startWorkOrder(snapshot, command), `${command.id} started at the demo time.`); }
+  function start(command: RevisionCommand) { commit(snapshot => startWorkOrder(snapshot, command), `${command.id} started.`); }
   function complete(command: CompleteWorkOrderCommand) { commit(snapshot => completeWorkOrder(snapshot, command), `${command.id} completed.`); }
   function cancel(command: RevisionCommand) { commit(snapshot => cancelWorkOrder(snapshot, command), `${command.id} canceled.`); }
   function remove(command: RevisionCommand) { commit(snapshot => deleteWorkOrder(snapshot, command), `${command.id} deleted.`); }
@@ -43,5 +43,5 @@ export function useDataset() {
     const fresh = resetSession(baseline,__APP_PROFILE__,storage);
     setDataset(fresh); setBlocked(false); setWarning(''); setNotice('Sample data restored to its original baseline.');
   }
-  return {dataset,error,warning,blocked,notice,assign,create,edit,unassign,start,complete,cancel,remove,reset,retry:()=>setAttempt(value=>value+1)};
+  return {dataset,error,warning,blocked,notice,clearNotice:()=>setNotice(''),assign,create,edit,unassign,start,complete,cancel,remove,reset,retry:()=>setAttempt(value=>value+1)};
 }

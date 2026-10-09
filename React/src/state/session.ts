@@ -1,4 +1,4 @@
-import { parseDataset, type Dataset } from '../../../../shared/contracts/domain.ts';
+import { parseDataset, rebaseDataset, type Dataset } from '../../../../shared/contracts/domain.ts';
 
 export type RuntimeProfile = 'public' | 'customer';
 export interface StorageLike {
@@ -10,8 +10,8 @@ export interface StorageLike {
 export const STORAGE_KEY = 'syncfusion.field-service-operations.customer.v1';
 
 function referenceFingerprint(dataset: Dataset): string {
-  const { workOrders, ...reference } = dataset;
-  // parseDataset returns a canonical object shape; work orders are the only mutable entities.
+  const { workOrders, demoNow, ...reference } = dataset;
+  // parseDataset returns a canonical object shape; work orders and the rebased clock are the only values that move.
   return JSON.stringify(reference);
 }
 
@@ -30,7 +30,8 @@ export function loadSession(baseline: Dataset, profile: RuntimeProfile, storage:
   try {
     const restored = parseDataset(JSON.parse(saved));
     if (referenceFingerprint(restored) !== referenceFingerprint(baseline)) throw new Error('Incompatible baseline');
-    return { dataset: structuredClone(restored), warning: null, blocked: false };
+    // Saved work follows the clock too, so yesterday's appointments do not go stale.
+    return { dataset: structuredClone(rebaseDataset(restored, new Date(baseline.demoNow))), warning: null, blocked: false };
   } catch {
     return { dataset: fresh, blocked: true, warning: 'Saved customer data is invalid or belongs to a different fixture version. Editing is paused. Reset explicitly to replace it with the current baseline.' };
   }
